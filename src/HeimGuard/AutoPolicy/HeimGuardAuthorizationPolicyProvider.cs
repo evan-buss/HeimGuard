@@ -6,12 +6,15 @@ namespace HeimGuard.AutoPolicy
 
     public class HeimGuardAuthorizationPolicyProvider : DefaultAuthorizationPolicyProvider
     {
+        private readonly IOptions<AuthorizationOptions> _options;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="HeimGuardAuthorizationPolicyProvider"/> class.
         /// </summary>
         /// <param name="options">The options.</param>
         public HeimGuardAuthorizationPolicyProvider(IOptions<AuthorizationOptions> options) : base(options)
         {
+            _options = options;
         }
 
         /// <summary>
@@ -24,9 +27,15 @@ namespace HeimGuard.AutoPolicy
         public override async Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
         {
             // check static policies and add it if it isn't already there
-            var policy = await base.GetPolicyAsync(policyName) ?? new AuthorizationPolicyBuilder()
-                .AddRequirements(new PermissionRequirement(policyName))
-                .Build();
+            var policy = await base.GetPolicyAsync(policyName);
+            if (policy is null)
+            {
+                policy = new AuthorizationPolicyBuilder()
+                    .AddRequirements(new PermissionRequirement(policyName))
+                    .Build();
+
+                _options.Value.AddPolicy(policyName, policy);
+            }
 
             return policy;
         }
